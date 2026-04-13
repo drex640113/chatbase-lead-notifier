@@ -12,20 +12,24 @@ router.post('/chatbase-lead', async (req, res) => {
     const payload = req.body;
     console.log('📩 Lead received:', JSON.stringify(payload, null, 2));
 
-    const { conversation_id, lead, chatbot_id } = payload;
-    const { name, email, phone } = lead || {};
+    // 修正：Chatbase 實際 payload 結構
+    const chatbotId = payload.chatbotId;
+    const conversationId = payload.payload?.conversationId;
+    const name = payload.payload?.customerName || '未提供';
+    const email = payload.payload?.customerEmail || '未提供';
+    const phone = payload.payload?.customerPhone || '未提供';
 
-    console.log(`🔍 Fetching conversation: ${conversation_id}`);
-    const messages = await fetchConversation(chatbot_id, conversation_id);
+    console.log(`🔍 Fetching conversation: ${conversationId}`);
+    const messages = await fetchConversation(chatbotId, conversationId);
 
     console.log('🤖 Generating AI summary...');
     const aiSummary = await summarizeWithClaude(messages);
 
     const notificationData = {
-      name: name || '未提供',
-      email: email || '未提供',
-      phone: phone || '未提供',
-      conversation_id,
+      name,
+      email,
+      phone,
+      conversation_id: conversationId,
       aiSummary,
       messages,
       timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
