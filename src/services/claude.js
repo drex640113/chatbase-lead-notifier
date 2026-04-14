@@ -33,9 +33,15 @@ async function summarizeWithMinimax(messages) {
       }
     );
 
-    return response.data.content?.[0]?.text?.trim() || '（摘要生成失敗）';
+    // Log 完整回應幫助 debug
+    console.log('🤖 MiniMax response:', JSON.stringify(response.data, null, 2));
+
+    const text = response.data.content?.[0]?.text?.trim();
+    console.log('🤖 Extracted text:', text);
+
+    return text || '（摘要生成失敗）';
   } catch (err) {
-    console.error('❌ MiniMax error:', err.response?.data || err.message);
+    console.error('❌ MiniMax error:', JSON.stringify(err.response?.data) || err.message);
     return '（AI 摘要暫時無法使用）';
   }
 }
