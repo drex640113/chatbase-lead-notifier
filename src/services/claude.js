@@ -6,11 +6,12 @@ async function summarizeWithMinimax(messages) {
   }
 
   const userMessages = messages
-    .filter(m => m.role === 'user')
-    .map(m => m.content)
+    .filter(m => m.role === 'user' && typeof m.content === 'string')
+    .map(m => m.content.trim())
+    .filter(Boolean)
     .join('\n');
 
-  if (!userMessages.trim()) return '（對話中無用戶訊息）';
+  if (!userMessages) return '（對話中無用戶訊息）';
 
   const prompt = `以下是訪客在 AI 客服的發言：\n\n${userMessages}\n\n請用一句話（繁體中文，30字以內）總結這位訪客的主要需求或意圖。直接輸出這句話，不加任何前綴。`;
 
@@ -24,11 +25,11 @@ async function summarizeWithMinimax(messages) {
       },
       {
         headers: {
-          'x-api-key': process.env.MINIMAX_API_KEY,
+          'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}`,
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
-        timeout: 15000,
+        timeout: 20000,
       }
     );
 
