@@ -1,13 +1,10 @@
 const axios = require('axios');
 
-/**
- * 拿最近 N 分鐘內的所有 Leads
- */
 async function fetchRecentLeads(chatbotId, minutes = 65) {
   try {
     const now = new Date();
     const since = new Date(now.getTime() - minutes * 60 * 1000);
-    const startDate = since.toISOString().split('T')[0]; // YYYY-MM-DD
+    const startDate = since.toISOString().split('T')[0];
 
     const response = await axios.get(
       'https://www.chatbase.co/api/v1/get-leads',
@@ -24,12 +21,15 @@ async function fetchRecentLeads(chatbotId, minutes = 65) {
       }
     );
 
-    const leads = response.data?.data || [];
+    // 正確欄位是 collectedCustomers
+    const leads = response.data?.collectedCustomers || [];
     console.log(`📋 Total leads fetched: ${leads.length}`);
+    if (leads.length > 0) {
+      console.log('📋 First lead sample:', JSON.stringify(leads[0], null, 2));
+    }
 
-    // 過濾出真正在這個小時內的
     const recentLeads = leads.filter(lead => {
-      const createdAt = new Date(lead.created_at || lead.createdAt);
+      const createdAt = new Date(lead.created_at);
       return createdAt >= since;
     });
 
