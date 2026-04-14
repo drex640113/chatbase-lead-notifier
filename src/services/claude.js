@@ -33,13 +33,33 @@ async function summarizeWithMinimax(messages) {
       }
     );
 
-    // Log 完整回應幫助 debug
-    console.log('🤖 MiniMax response:', JSON.stringify(response.data, null, 2));
+    const data = response.data;
+    console.log('🤖 MiniMax raw:', JSON.stringify(data).substring(0, 300));
 
-    const text = response.data.content?.[0]?.text?.trim();
-    console.log('🤖 Extracted text:', text);
+    // 嘗試各種可能的回傳格式
+    let text = null;
 
-    return text || '（摘要生成失敗）';
+    // 格式1: Anthropic 標準格式 { content: [{type:'text', text:'...'}] }
+    if (Array.isArray(data.content)) {
+      const block = data.content.find(b => b.type === 'text' || b.text);
+      text = block?.text;
+    }
+    // 格式2: 直接字串 { content: '...' }
+    if (!text && typeof data.content === 'string') {
+      text = data.content;
+    }
+    // 格式3: OpenAI 格式 { choices: [{message:{content:'...'}}] }
+    if (!text && data.choices?.[0]?.message?.content) {
+      text = data.choices[0].message.content;
+    }
+    // 格式4: 直接 text 欄位
+    if (!text && data.text) {
+      text = data.text;
+    }
+
+    console.log('🤖 Extracted summary:', text);
+    return text?.trim() || '（摘要生成失敗）';
+
   } catch (err) {
     console.error('❌ MiniMax error:', JSON.stringify(err.response?.data) || err.message);
     return '（AI 摘要暫時無法使用）';
