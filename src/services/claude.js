@@ -1,13 +1,8 @@
 const axios = require('axios');
 
-/**
- * 用 MiniMax M2.7 對對話紀錄做一句話摘要
- * @param {Array} messages - Chatbase messages array
- * @returns {string} summary
- */
-async function summarizeWithClaude(messages) {
+async function summarizeWithMinimax(messages) {
   if (!messages || messages.length === 0) {
-    return '（無法取得對話紀錄，無法生成摘要）';
+    return '（無對話紀錄可分析）';
   }
 
   const userMessages = messages
@@ -15,19 +10,11 @@ async function summarizeWithClaude(messages) {
     .map(m => m.content)
     .join('\n');
 
-  if (!userMessages.trim()) {
-    return '（對話紀錄中無用戶訊息）';
-  }
+  if (!userMessages.trim()) return '（對話中無用戶訊息）';
 
-  const prompt = `以下是一位訪客在 AI 客服聊天機器人上的對話內容（僅用戶發言）：
-
-${userMessages}
-
-請用一句話（繁體中文，30字以內）總結這位訪客的主要需求或意圖，供業務人員快速判斷優先級。
-格式：直接輸出這句話，不要加任何前綴或解釋。`;
+  const prompt = `以下是訪客在 AI 客服的發言：\n\n${userMessages}\n\n請用一句話（繁體中文，30字以內）總結這位訪客的主要需求或意圖。直接輸出這句話，不加任何前綴。`;
 
   try {
-    // MiniMax M2.7 使用 Anthropic-compatible endpoint
     const response = await axios.post(
       'https://api.minimax.io/anthropic/v1/messages',
       {
@@ -46,11 +33,10 @@ ${userMessages}
     );
 
     return response.data.content?.[0]?.text?.trim() || '（摘要生成失敗）';
-
   } catch (err) {
-    console.error('❌ MiniMax API error:', err.response?.data || err.message);
-    return '（AI 摘要服務暫時無法使用）';
+    console.error('❌ MiniMax error:', err.response?.data || err.message);
+    return '（AI 摘要暫時無法使用）';
   }
 }
 
-module.exports = { summarizeWithClaude };
+module.exports = { summarizeWithMinimax };

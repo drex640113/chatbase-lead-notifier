@@ -1,12 +1,20 @@
 const axios = require('axios');
 
-async function fetchConversation(chatbotId, conversationId) {
-  if (!conversationId || !chatbotId) {
-    console.warn('⚠️ Missing chatbotId or conversationId:', { chatbotId, conversationId });
+/**
+ * 用 chatbotId 拿所有對話，再用 conversationId 比對取出訊息
+ * 根據官方文件：GET /api/v1/get-conversations?chatbotId=xxx
+ * 回傳：{ data: [{ id, chatbot_id, messages: [{role, content}] }] }
+ */
+async function fetchConversationById(chatbotId, conversationId) {
+  if (!chatbotId || !conversationId) {
+    console.warn('⚠️ Missing chatbotId or conversationId');
     return [];
   }
 
   try {
+    // 取今天的對話（避免拉太多）
+    const today = new Date().toISOString().split('T')[0];
+
     const response = await axios.get(
       'https://www.chatbase.co/api/v1/get-conversations',
       {
@@ -14,24 +22,31 @@ async function fetchConversation(chatbotId, conversationId) {
           Authorization: `Bearer ${process.env.CHATBASE_API_KEY}`,
         },
         params: {
-          chatbotId: chatbotId,
-          size: 50,
+          chatbotId,
+          startDate: today,
+          size: 100,
         },
-        timeout: 10000,
+        timeout: 15000,
       }
     );
 
     const conversations = response.data?.data || [];
-    console.log(`📋 Total conversations fetched: ${conversations.length}`);
+    console.log(`📋 Conversations fetched: ${conversations.length}`);
 
-    const conversation = conversations.find(c => c.id === conversationId);
+    // 比對 conversationId
+    const match = conversations.find(c => c.id === conversationId);
 
-    if (!conversation) {
-      console.warn(`⚠️ Conversation ${conversationId} not found in results`);
+    if (!match) {
+      console.warn(`⚠️ conversationId ${conversationId} not found`);
+      // Log 前幾個 id 幫助 debug
+      if (conversations.length > 0) {
+        console.log('Available IDs:', conversations.slice(0, 3).map(c => c.id));
+      }
       return [];
     }
 
-    return conversation.messages || [];
+    console.log(`✅ Found conversation with ${match.messages?.length || 0} messages`);
+    return match.messages || [];
 
   } catch (err) {
     console.error('❌ Chatbase API error:', err.response?.data || err.message);
@@ -39,4 +54,4 @@ async function fetchConversation(chatbotId, conversationId) {
   }
 }
 
-module.exports = { fetchConversation };
+module.exports = { fetchConversationById };
