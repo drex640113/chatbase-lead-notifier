@@ -19,9 +19,8 @@ async function summarizeWithMinimax(messages) {
     const response = await axios.post(
       'https://api.minimax.io/anthropic/v1/messages',
       {
-        model: 'MiniMax-M2.7',
-        max_tokens: 500,
-        thinking: { type: 'disabled' }, // 關掉 thinking 模式
+        model: 'MiniMax-M2.5',  // 改用 M2.5，沒有強制 thinking
+        max_tokens: 300,
         messages: [{ role: 'user', content: prompt }],
       },
       {
@@ -35,23 +34,14 @@ async function summarizeWithMinimax(messages) {
     );
 
     const data = response.data;
-    console.log('🤖 MiniMax content blocks:', JSON.stringify(data.content?.map(b => b.type)));
+    console.log('🤖 blocks:', JSON.stringify(data.content?.map(b => b.type)));
 
-    // 找 text 類型的 block，跳過 thinking
     let text = null;
     if (Array.isArray(data.content)) {
       const textBlock = data.content.find(b => b.type === 'text');
       text = textBlock?.text;
-      // 如果沒有 text block，試試 thinking block 的內容作為備用
-      if (!text) {
-        const thinkingBlock = data.content.find(b => b.thinking);
-        if (thinkingBlock?.thinking) {
-          // 從 thinking 裡抓最後一行作為摘要
-          const lines = thinkingBlock.thinking.split('\n').filter(Boolean);
-          text = lines[lines.length - 1];
-        }
-      }
     }
+    if (!text && typeof data.content === 'string') text = data.content;
 
     console.log('🤖 Summary:', text);
     return text?.trim() || '（摘要生成失敗）';
