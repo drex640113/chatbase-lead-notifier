@@ -79,3 +79,22 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
+
+// 測試 MiniMax AI 摘要
+app.get('/test/ai', async (req, res) => {
+  res.json({ message: 'Testing MiniMax AI... check Render logs' });
+
+  const mockMessages = [
+    { role: 'user', content: '請問海景戶型價格多少？' },
+    { role: 'assistant', content: '您好！' },
+    { role: 'user', content: '有沒有適合投資的房型？' },
+    { role: 'user', content: '幾房幾廳？' },
+  ];
+
+  try {
+    const result = await summarizeWithMinimax(mockMessages);
+    console.log('✅ AI Summary result:', result);
+  } catch (err) {
+    console.error('❌ AI test error:', err.message);
+  }
+});
