@@ -20,7 +20,8 @@ async function summarizeWithMinimax(messages) {
       'https://api.minimax.io/anthropic/v1/messages',
       {
         model: 'MiniMax-M2.7',
-        max_tokens: 200,
+        max_tokens: 500,
+        thinking: { type: 'disabled' }, // 關掉 thinking 模式
         messages: [{ role: 'user', content: prompt }],
       },
       {
@@ -34,30 +35,25 @@ async function summarizeWithMinimax(messages) {
     );
 
     const data = response.data;
-    console.log('🤖 MiniMax raw:', JSON.stringify(data).substring(0, 300));
+    console.log('🤖 MiniMax content blocks:', JSON.stringify(data.content?.map(b => b.type)));
 
-    // 嘗試各種可能的回傳格式
+    // 找 text 類型的 block，跳過 thinking
     let text = null;
-
-    // 格式1: Anthropic 標準格式 { content: [{type:'text', text:'...'}] }
     if (Array.isArray(data.content)) {
-      const block = data.content.find(b => b.type === 'text' || b.text);
-      text = block?.text;
-    }
-    // 格式2: 直接字串 { content: '...' }
-    if (!text && typeof data.content === 'string') {
-      text = data.content;
-    }
-    // 格式3: OpenAI 格式 { choices: [{message:{content:'...'}}] }
-    if (!text && data.choices?.[0]?.message?.content) {
-      text = data.choices[0].message.content;
-    }
-    // 格式4: 直接 text 欄位
-    if (!text && data.text) {
-      text = data.text;
+      const textBlock = data.content.find(b => b.type === 'text');
+      text = textBlock?.text;
+      // 如果沒有 text block，試試 thinking block 的內容作為備用
+      if (!text) {
+        const thinkingBlock = data.content.find(b => b.thinking);
+        if (thinkingBlock?.thinking) {
+          // 從 thinking 裡抓最後一行作為摘要
+          const lines = thinkingBlock.thinking.split('\n').filter(Boolean);
+          text = lines[lines.length - 1];
+        }
+      }
     }
 
-    console.log('🤖 Extracted summary:', text);
+    console.log('🤖 Summary:', text);
     return text?.trim() || '（摘要生成失敗）';
 
   } catch (err) {
