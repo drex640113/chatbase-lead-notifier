@@ -12,39 +12,34 @@ async function sendTelegram(text) {
 }
 
 async function sendLeadTelegram({ name, email, phone, chatbotName, aiSummary, messages, timestamp }) {
-  // 第一則：Lead 聯繫資訊
-  const msg1 = [
-    '🔔 <b>新 Lead 通知</b>',
-    `⏰ ${timestamp}`,
-    `🏢 來源：<b>${chatbotName}</b>`,
-    '─────────────────',
-    `👤 姓名：<b>${name}</b>`,
-    `📧 Email：<b>${email}</b>`,
-    `📱 電話：<b>${phone}</b>`,
-    '',
-    '🤖 <b>AI 意圖分析：</b>',
-    aiSummary,
-  ].join('\n');
+  // 整理訪客問題
+  const userLines = (messages || [])
+    .filter(m => m.role === 'user' && typeof m.content === 'string')
+    .map(m => m.content.trim())
+    .filter(l => l.length > 0);
 
-  await sendTelegram(msg1);
-  console.log('📲 Telegram msg 1 sent');
-
-  // 第二則：訪客問的問題
-  if (messages && messages.length > 0) {
-    const userLines = messages
-      .filter(m => m.role === 'user' && typeof m.content === 'string')
-      .map(m => `👤 ${m.content.trim()}`)
-      .filter(l => l.length > 3);
-
-    if (userLines.length > 0) {
-      let convo = userLines.join('\n\n');
-      if (convo.length > 3500) convo = convo.substring(0, 3500) + '\n...(已截斷)';
-
-      const msg2 = `❓ <b>訪客詢問的問題：</b>\n─────────────────\n${convo}`;
-      await sendTelegram(msg2);
-      console.log('📲 Telegram msg 2 sent');
-    }
+  let questionsBlock = '';
+  if (userLines.length > 0) {
+    let convo = userLines.join('\n');
+    if (convo.length > 2000) convo = convo.substring(0, 2000) + '\n...(已截斷)';
+    questionsBlock = `\n<b>訪客詢問的問題：</b>\n${convo}`;
   }
+
+  const msg = [
+    `<b>新 Lead 通知</b>`,
+    `時間：${timestamp}`,
+    `來源：${chatbotName}`,
+    `─────────────────`,
+    `姓名：<b>${name}</b>`,
+    `Email：<b>${email}</b>`,
+    `電話：<b>${phone}</b>`,
+    questionsBlock,
+    `<b>AI 意圖分析：</b>`,
+    aiSummary,
+  ].filter(l => l !== '').join('\n');
+
+  await sendTelegram(msg);
+  console.log('📲 Telegram sent');
 }
 
 module.exports = { sendLeadTelegram };
