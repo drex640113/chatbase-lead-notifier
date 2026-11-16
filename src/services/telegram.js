@@ -39,6 +39,21 @@ async function sendLeadTelegram({ name, email, phone, chatbotName, aiSummary, me
     questionsBlock = `\n<b>訪客詢問的問題：</b>\n${convo}`;
   }
 
+  // 完整對話紀錄（訪客 + AI 交錯）
+  const chatLines = (messages || [])
+    .filter(m => typeof m.content === 'string' && m.content.trim().length > 0)
+    .map(m => {
+      const prefix = m.role === 'user' ? '👤' : '🤖';
+      return `${prefix} ${m.content.trim()}`;
+    });
+
+  let chatBlock = '';
+  if (chatLines.length > 0) {
+    let chat = chatLines.join('\n');
+    if (chat.length > 3000) chat = chat.substring(0, 3000) + '\n...(已截斷)';
+    chatBlock = `\n─────────────────\n<b>完整對話紀錄：</b>\n${chat}`;
+  }
+
   const msg = [
     `<b>新 Lead 通知</b>`,
     `時間：${timestamp}`,
@@ -50,6 +65,7 @@ async function sendLeadTelegram({ name, email, phone, chatbotName, aiSummary, me
     questionsBlock,
     `<b>AI 意圖分析：</b>`,
     aiSummary,
+    chatBlock,
   ].filter(l => l !== '').join('\n');
 
   const success = await sendTelegramWithRetry(msg);
